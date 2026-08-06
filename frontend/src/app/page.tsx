@@ -91,6 +91,7 @@ export default function Home() {
                   </Link>
                 </div>
               )}
+            </div>
           </div>
 
           {/* Welcome message if authenticated */}
