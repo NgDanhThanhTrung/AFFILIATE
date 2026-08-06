@@ -19,6 +19,10 @@ export interface AuthResponse {
   tokens: AuthTokens
 }
 
+export interface ApiResponse<T> {
+  data: T
+}
+
 export interface LoginCredentials {
   phoneNumber: string
   password: string

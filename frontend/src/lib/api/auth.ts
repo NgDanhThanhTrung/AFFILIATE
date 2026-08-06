@@ -6,11 +6,12 @@ import {
   PinCredentials,
   ChangePasswordCredentials,
   ChangePinCredentials,
+  ApiResponse,
 } from '../../types/auth'
 
 export const authApi = {
   async login(credentials: LoginCredentials): Promise<AuthResponse> {
-    const response = await apiClient.getAxiosInstance().post<AuthResponse>('/auth/login', credentials)
+    const response = await apiClient.getAxiosInstance().post<ApiResponse<AuthResponse>>('/auth/login', credentials)
     const { user, tokens } = response.data.data
 
     // Store tokens
@@ -20,7 +21,7 @@ export const authApi = {
   },
 
   async register(credentials: RegisterCredentials): Promise<AuthResponse> {
-    const response = await apiClient.getAxiosInstance().post<AuthResponse>('/auth/register', credentials)
+    const response = await apiClient.getAxiosInstance().post<ApiResponse<AuthResponse>>('/auth/register', credentials)
     const { user, tokens } = response.data.data
 
     // Store tokens
@@ -35,7 +36,7 @@ export const authApi = {
   },
 
   async verifyPin(credentials: PinCredentials): Promise<{ verified: boolean }> {
-    const response = await apiClient.getAxiosInstance().post('/auth/verify-pin', credentials)
+    const response = await apiClient.getAxiosInstance().post<ApiResponse<{ verified: boolean }>>('/auth/verify-pin', credentials)
     return response.data.data
   },
 
@@ -52,7 +53,7 @@ export const authApi = {
   },
 
   async refreshToken(refreshToken: string): Promise<{ accessToken: string; refreshToken: string }> {
-    const response = await apiClient.getAxiosInstance().post('/auth/refresh-token', { refreshToken })
+    const response = await apiClient.getAxiosInstance().post<ApiResponse<{ accessToken: string; refreshToken: string }>>('/auth/refresh-token', { refreshToken })
     return response.data.data
   },
 }

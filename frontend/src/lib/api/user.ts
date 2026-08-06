@@ -6,30 +6,31 @@ import {
   AddBankAccountData,
   UpdateBankAccountData,
 } from '../../types/user'
+import { ApiResponse } from '../../types/auth'
 
 export const userApi = {
   async getProfile(): Promise<UserProfile> {
-    const response = await apiClient.getAxiosInstance().get<UserProfile>('/user/profile')
+    const response = await apiClient.getAxiosInstance().get<ApiResponse<UserProfile>>('/user/profile')
     return response.data.data
   },
 
   async updateProfile(data: UpdateProfileData): Promise<UserProfile> {
-    const response = await apiClient.getAxiosInstance().put<UserProfile>('/user/profile', data)
+    const response = await apiClient.getAxiosInstance().put<ApiResponse<UserProfile>>('/user/profile', data)
     return response.data.data
   },
 
   async getBankAccounts(): Promise<BankAccount[]> {
-    const response = await apiClient.getAxiosInstance().get<BankAccount[]>('/user/bank-accounts')
+    const response = await apiClient.getAxiosInstance().get<ApiResponse<BankAccount[]>>('/user/bank-accounts')
     return response.data.data
   },
 
   async addBankAccount(data: AddBankAccountData): Promise<BankAccount> {
-    const response = await apiClient.getAxiosInstance().post<BankAccount>('/user/bank-accounts', data)
+    const response = await apiClient.getAxiosInstance().post<ApiResponse<BankAccount>>('/user/bank-accounts', data)
     return response.data.data
   },
 
   async updateBankAccount(id: string, data: UpdateBankAccountData): Promise<BankAccount> {
-    const response = await apiClient.getAxiosInstance().put<BankAccount>(`/user/bank-accounts/${id}`, data)
+    const response = await apiClient.getAxiosInstance().put<ApiResponse<BankAccount>>(`/user/bank-accounts/${id}`, data)
     return response.data.data
   },
 
