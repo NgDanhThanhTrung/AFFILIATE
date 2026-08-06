@@ -4,7 +4,7 @@ export interface UserProfile {
   name: string | null
   email: string | null
   avatar: string | null
-  role: string
+  role?: 'USER' | 'ADMIN' | 'SUPER_ADMIN'
   isPhoneVerified: boolean
   hasPin: boolean
   createdAt: string
