@@ -1,6 +1,6 @@
 'use client'
 
-import { useAuth } from '../contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import { OrderHistory } from '../../components/OrderHistory'
 import { OrderStats } from '../../components/OrderStats'
 
