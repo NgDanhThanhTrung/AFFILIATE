@@ -16,7 +16,7 @@
     "declarationMap": true,
     "sourceMap": true,
     "types": ["node", "jest"],
-    "ignoreDeprecations": "6.0"
+    "ignoreDeprecations": true
   },
   "include": ["src/**/*", "prisma/**/*"],
   "exclude": ["node_modules", "dist", "**/*.test.ts"]
