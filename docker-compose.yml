@@ -1,0 +1,101 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: affiliate-postgres
+    environment:
+      POSTGRES_USER: affiliate_user
+      POSTGRES_PASSWORD: affiliate_password
+      POSTGRES_DB: affiliate_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U affiliate_user"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - affiliate-network
+
+  # Backend API
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: affiliate-backend
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://affiliate_user:affiliate_password@postgres:5432/affiliate_db
+      API_BASE_URL: https://api.affiliate-platform.com
+      API_PORT: 3001
+      FRONTEND_URL: https://affiliate-platform.com
+      FRONTEND_PORT: 3000
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET}
+      JWT_EXPIRES_IN: 15m
+      JWT_REFRESH_EXPIRES_IN: 7d
+      RATE_LIMIT_WINDOW_MS: 900000
+      RATE_LIMIT_MAX_REQUESTS: 100
+      SHOPEE_WEBHOOK_SECRET: ${SHOPEE_WEBHOOK_SECRET}
+      TIKTOK_WEBHOOK_SECRET: ${TIKTOK_WEBHOOK_SECRET}
+      SHOPEE_WEBHOOK_PATH: /webhook/shopee
+      TIKTOK_WEBHOOK_PATH: /webhook/tiktok
+      SUPER_ADMIN_PHONE_NUMBER: ${SUPER_ADMIN_PHONE_NUMBER}
+      SUPER_ADMIN_DEFAULT_PASSWORD: ${SUPER_ADMIN_DEFAULT_PASSWORD}
+      SHOPEE_COMMISSION_RATE: 5.0
+      TIKTOK_COMMISSION_RATE: 4.5
+      MIN_WITHDRAWAL_AMOUNT: 50000
+      MAX_WITHDRAWAL_AMOUNT: 10000000
+      WITHDRAWAL_FEE_PERCENT: 0
+      WITHDRAWAL_PROCESSING_HOURS: 24
+      TRANSACTION_RETENTION_DAYS: 365
+      LINK_EXPIRATION_DAYS: 0
+      LINK_ID_LENGTH: 10
+      LOG_LEVEL: info
+      CORS_ORIGINS: https://affiliate-platform.com
+      MAX_LOGIN_ATTEMPTS: 5
+      LOGIN_LOCKOUT_MINUTES: 15
+      MIN_PASSWORD_LENGTH: 8
+      REQUIRE_PASSWORD_SPECIAL_CHAR: true
+      REQUIRE_PASSWORD_NUMBER: true
+      REQUIRE_PASSWORD_UPPERCASE: true
+      MAX_UPLOAD_SIZE: 5242880
+      ALLOWED_FILE_TYPES: jpg,jpeg,png,pdf
+      HEALTH_CHECK_ENABLED: true
+      METRICS_ENABLED: false
+    ports:
+      - "3001:3001"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - affiliate-network
+    restart: unless-stopped
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: affiliate-frontend
+    environment:
+      NEXT_PUBLIC_API_URL: https://api.affiliate-platform.com/api
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - affiliate-network
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    driver: local
+
+networks:
+  affiliate-network:
+    driver: bridge

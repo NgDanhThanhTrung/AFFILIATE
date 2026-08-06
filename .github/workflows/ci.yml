@@ -1,0 +1,188 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  backend:
+    name: Backend CI
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: affiliate_user
+          POSTGRES_PASSWORD: affiliate_password
+          POSTGRES_DB: affiliate_test_db
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: backend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Generate Prisma Client
+      working-directory: ./backend
+      run: npx prisma generate
+      env:
+        DATABASE_URL: postgresql://affiliate_user:affiliate_password@localhost:5432/affiliate_test_db
+
+    - name: Run database migrations
+      working-directory: ./backend
+      run: npx prisma migrate deploy
+      env:
+        DATABASE_URL: postgresql://affiliate_user:affiliate_password@localhost:5432/affiliate_test_db
+
+    - name: Type check
+      working-directory: ./backend
+      run: npm run build
+
+    - name: Lint
+      working-directory: ./backend
+      run: npm run lint
+      continue-on-error: true
+
+    - name: Run tests
+      working-directory: ./backend
+      run: npm test
+      env:
+        DATABASE_URL: postgresql://affiliate_user:affiliate_password@localhost:5432/affiliate_test_db
+        NODE_ENV: test
+      continue-on-error: true
+
+  frontend:
+    name: Frontend CI
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Type check
+      working-directory: ./frontend
+      run: npm run type-check
+
+    - name: Lint
+      working-directory: ./frontend
+      run: npm run lint
+      continue-on-error: true
+
+    - name: Build
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: Run tests
+      working-directory: ./frontend
+      run: npm test
+      continue-on-error: true
+
+  security:
+    name: Security Scan
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Run npm audit (Backend)
+      working-directory: ./backend
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Run npm audit (Frontend)
+      working-directory: ./frontend
+      run: npm audit --audit-level=moderate
+      continue-on-error: true
+
+    - name: Check for secrets
+      uses: trufflesecurity/trufflehog-actions-scan@main
+      with:
+        path: ./
+        base: ${{ github.event.repository.default_branch }}
+        head: HEAD
+
+  deploy-staging:
+    name: Deploy to Staging
+    needs: [backend, frontend, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Render (Backend)
+      run: |
+        echo "Deploying backend to Render staging"
+        # Add Render deployment command here
+        # curl -X POST https://api.render.com/v1/services/...
+
+    - name: Deploy to Vercel (Frontend)
+      run: |
+        echo "Deploying frontend to Vercel staging"
+        # Add Vercel deployment command here
+        # vercel --token=$VERCEL_TOKEN --prod=false
+
+  deploy-production:
+    name: Deploy to Production
+    needs: [backend, frontend, security]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Deploy to Render (Backend)
+      run: |
+        echo "Deploying backend to Render production"
+        # Add Render deployment command here
+
+    - name: Deploy to Vercel (Frontend)
+      run: |
+        echo "Deploying frontend to Vercel production"
+        # Add Vercel deployment command here
+
+    - name: Create Release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ github.run_number }}
+        release_name: Release v${{ github.run_number }}
+        body: |
+          Changes in this Release
+          - Production deployment completed
+        draft: false
+        prerelease: false

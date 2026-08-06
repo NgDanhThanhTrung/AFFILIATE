@@ -1,0 +1,285 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// USER & AUTH
+// ============================================
+
+model User {
+  id                String    @id @default(cuid())
+  phoneNumber       String    @unique
+  passwordHash      String
+  pinHash           String?
+  name              String?
+  email             String?   @unique
+  avatar            String?
+  role              UserRole  @default(USER)
+  isPhoneVerified   Boolean   @default(false)
+  isActive          Boolean   @default(true)
+  lastLoginAt       DateTime?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // Relations
+  wallet            Wallet?
+  affiliateLinks    AffiliateLink[]
+  orders            Order[]
+  transactions      Transaction[]
+  withdrawalRequests WithdrawalRequest[]
+  bankAccounts      BankAccount[]
+
+  @@index([phoneNumber])
+  @@index([email])
+  @@index([role])
+}
+
+enum UserRole {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+// ============================================
+// WALLET & TRANSACTIONS
+// ============================================
+
+model Wallet {
+  id              String   @id @default(cuid())
+  userId          String   @unique
+  balance         Decimal  @default(0) @db.Decimal(15, 2)
+  totalEarned     Decimal  @default(0) @db.Decimal(15, 2)
+  totalWithdrawn  Decimal  @default(0) @db.Decimal(15, 2)
+  currency        String   @default("VND")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  transactions    Transaction[]
+
+  @@index([userId])
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  userId          String
+  walletId        String
+  type            TransactionType
+  amount          Decimal  @db.Decimal(15, 2)
+  balanceBefore   Decimal  @db.Decimal(15, 2)
+  balanceAfter    Decimal  @db.Decimal(15, 2)
+  description     String?
+  referenceId     String?
+  referenceType   String?
+  status          TransactionStatus @default(COMPLETED)
+  metadata        Json?
+  createdAt       DateTime @default(now())
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  wallet          Wallet   @relation(fields: [walletId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([walletId])
+  @@index([referenceId])
+  @@index([createdAt])
+}
+
+enum TransactionType {
+  CASHBACK_IN
+  WITHDRAWAL_OUT
+  REFUND_IN
+  ADJUSTMENT_IN
+  ADJUSTMENT_OUT
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+// ============================================
+// AFFILIATE LINKS
+// ============================================
+
+model AffiliateLink {
+  id              String   @id @default(cuid())
+  userId          String
+  originalUrl     String
+  affiliateUrl    String
+  platform        Platform
+  subId           String   @unique
+  campaignId      String?
+  clickCount      Int      @default(0)
+  conversionCount Int      @default(0)
+  totalRevenue    Decimal  @default(0) @db.Decimal(15, 2)
+  isActive        Boolean  @default(true)
+  expiresAt       DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders          Order[]
+
+  @@index([userId])
+  @@index([subId])
+  @@index([platform])
+  @@index([createdAt])
+}
+
+enum Platform {
+  SHOPEE
+  TIKTOK
+}
+
+// ============================================
+// ORDERS
+// ============================================
+
+model Order {
+  id              String      @id @default(cuid())
+  userId          String
+  affiliateLinkId String?
+  platformOrderId String      @unique
+  platform        Platform
+  subId           String?
+  orderAmount     Decimal     @db.Decimal(15, 2)
+  commissionRate  Decimal     @db.Decimal(5, 2)
+  commissionAmount Decimal    @db.Decimal(15, 2)
+  cashbackAmount  Decimal     @db.Decimal(15, 2)
+  status          OrderStatus @default(PENDING)
+  orderDate       DateTime?
+  shippedDate     DateTime?
+  completedDate   DateTime?
+  cancelledDate   DateTime?
+  metadata        Json?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+
+  // Relations
+  user            User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  affiliateLink   AffiliateLink? @relation(fields: [affiliateLinkId], references: [id])
+
+  @@index([userId])
+  @@index([affiliateLinkId])
+  @@index([platformOrderId])
+  @@index([subId])
+  @@index([platform])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+// ============================================
+// WITHDRAWAL REQUESTS
+// ============================================
+
+model WithdrawalRequest {
+  id              String          @id @default(cuid())
+  userId          String
+  bankAccountId   String
+  amount          Decimal         @db.Decimal(15, 2)
+  fee             Decimal         @default(0) @db.Decimal(15, 2)
+  netAmount       Decimal         @db.Decimal(15, 2)
+  status          WithdrawalStatus @default(PENDING)
+  pinVerified     Boolean         @default(false)
+  verifiedAt      DateTime?
+  processedAt     DateTime?
+  rejectionReason String?
+  transactionId   String?         @unique
+  metadata        Json?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  // Relations
+  user            User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  bankAccount     BankAccount     @relation(fields: [bankAccountId], references: [id])
+
+  @@index([userId])
+  @@index([bankAccountId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+enum WithdrawalStatus {
+  PENDING
+  APPROVED
+  PROCESSING
+  COMPLETED
+  REJECTED
+  FAILED
+}
+
+// ============================================
+// BANK ACCOUNTS
+// ============================================
+
+model BankAccount {
+  id              String   @id @default(cuid())
+  userId          String
+  bankName        String
+  bankCode        String
+  accountNumber   String
+  accountName     String
+  isDefault       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // Relations
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  withdrawalRequests WithdrawalRequest[]
+
+  @@index([userId])
+  @@unique([userId, accountNumber])
+}
+
+// ============================================
+// WEBHOOK LOGS
+// ============================================
+
+model WebhookLog {
+  id              String   @id @default(cuid())
+  platform        Platform
+  eventType       String
+  payload         Json
+  signature       String?
+  isValid         Boolean?
+  processed       Boolean  @default(false)
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+
+  @@index([platform])
+  @@index([eventType])
+  @@index([createdAt])
+}
+
+// ============================================
+// SYSTEM CONFIG
+// ============================================
+
+model SystemConfig {
+  id              String   @id @default(cuid())
+  key             String   @unique
+  value           String
+  description     String?
+  updatedAt       DateTime @updatedAt
+
+  @@index([key])
+}
