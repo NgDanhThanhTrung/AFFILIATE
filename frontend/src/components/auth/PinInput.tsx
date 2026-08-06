@@ -69,7 +69,9 @@ export function PinInput({ length = 6, onComplete, error }: PinInputProps) {
       {pin.map((digit, index) => (
         <input
           key={index}
-          ref={(el) => (inputRefs.current[index] = el)}
+          ref={(el) => {
+            inputRefs.current[index] = el
+          }}
           type="text"
           inputMode="numeric"
           maxLength={1}
