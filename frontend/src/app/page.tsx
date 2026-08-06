@@ -1,7 +1,6 @@
 'use client'
 
 import { useAuth } from '../contexts/AuthContext'
-import { useLanguage } from '../contexts/LanguageContext'
 import Link from 'next/link'
 import { LinkConverter } from '../components/LinkConverter'
 import { LinkHistory } from '../components/LinkHistory'
@@ -12,7 +11,6 @@ import { LanguageToggle } from '../components/LanguageToggle'
 
 export default function Home() {
   const { user, isAuthenticated, logout, isLoading } = useAuth()
-  const { t } = useLanguage()
 
   const handleLogout = async () => {
     await logout()
